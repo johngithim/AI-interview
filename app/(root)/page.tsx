@@ -10,11 +10,11 @@ import {
 } from "@/lib/actions/auth.action";
 
 const Page = async () => {
-  const user = await getCurrentUser();
-
-  const userInterviews = await getInterviewUserById(user?.id!);
-
-  const hasPastInterviews = userInterviews?.length > 0;
+  // const user = await getCurrentUser();
+  //
+  // const userInterviews = await getInterviewUserById(user?.id!);
+  //
+  // const hasPastInterviews = userInterviews?.length > 0;
 
   return (
     <>
@@ -42,15 +42,15 @@ const Page = async () => {
       <section className={"flex flex-col gap-6 mt-8"}>
         <h2>Your Interviews</h2>
 
-        <div className={"interviews-section"}>
-          {hasPastInterviews ? (
-            userInterviews?.map((interview) => (
-              <InterviewCard {...interview} key={interview.id} />
-            ))
-          ) : (
-            <p>You have&apos;t taken any interviews</p>
-          )}
-        </div>
+        {/*<div className={"interviews-section"}>*/}
+        {/*  {hasPastInterviews ? (*/}
+        {/*    userInterviews?.map((interview) => (*/}
+        {/*      <InterviewCard {...interview} key={interview.id} />*/}
+        {/*    ))*/}
+        {/*  ) : (*/}
+        {/*    <p>You have&apos;t taken any interviews</p>*/}
+        {/*  )}*/}
+        {/*</div>*/}
 
         {/*  <div className={"interviews-section"}>*/}
         {/*  {dummyInterviews.map((interview) => (*/}
