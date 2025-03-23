@@ -1,10 +1,11 @@
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
+
 import { getRandomInterviewCover } from "@/lib/utils";
 import { db } from "@/firebase/admin";
 
 export async function GET() {
-  return Response.json({ success: true, data: "THANK YOU!" }, { status: 200 });
+  return Response.json({ success: true, data: "Thank you!" }, { status: 200 });
 }
 
 export async function POST(request: Request) {
@@ -43,9 +44,8 @@ export async function POST(request: Request) {
     await db.collection("interviews").add(interview);
 
     return Response.json({ success: true }, { status: 200 });
-  } catch (e) {
-    console.log(e);
-
-    return Response.json({ success: false, e }, { status: 500 });
+  } catch (error) {
+    console.error("Error:", error);
+    return Response.json({ success: false, error: error }, { status: 500 });
   }
 }

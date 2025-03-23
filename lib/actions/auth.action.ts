@@ -2,25 +2,47 @@
 
 import { auth, db } from "@/firebase/admin";
 import { cookies } from "next/headers";
-import { User } from "lucide-react";
 
-const one_week = 60 * 60 * 24 * 7;
+// Session duration (1 week)
+const ONE_WEEK = 60 * 60 * 24 * 7;
+
+// Set session cookie
+export async function setSessionCookie(idToken: string) {
+  const cookieStore = await cookies();
+
+  // Create session cookie
+  const sessionCookie = await auth.createSessionCookie(idToken, {
+    expiresIn: ONE_WEEK * 1000, // milliseconds
+  });
+
+  // Set cookie in the browser
+  cookieStore.set("session", sessionCookie, {
+    maxAge: ONE_WEEK,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    sameSite: "lax",
+  });
+}
 
 export async function signUp(params: SignUpParams) {
   const { uid, name, email } = params;
 
   try {
+    // check if user exists in db
     const userRecord = await db.collection("users").doc(uid).get();
-    if (userRecord.exists) {
+    if (userRecord.exists)
       return {
         success: false,
-        message: "User already exists. Please sign in first",
+        message: "User already exists. Please sign in.",
       };
-    }
 
+    // save user to db
     await db.collection("users").doc(uid).set({
       name,
       email,
+      // profileURL,
+      // resumeURL,
     });
 
     return {
@@ -28,8 +50,9 @@ export async function signUp(params: SignUpParams) {
       message: "Account created successfully. Please sign in.",
     };
   } catch (error: any) {
-    console.error("Error creating a user", error);
+    console.error("Error creating user:", error);
 
+    // Handle Firebase specific errors
     if (error.code === "auth/email-already-exists") {
       return {
         success: false,
@@ -39,80 +62,86 @@ export async function signUp(params: SignUpParams) {
 
     return {
       success: false,
-      message: "Failed to create an account",
+      message: "Failed to create account. Please try again.",
     };
   }
 }
 
 export async function signIn(params: SignInParams) {
-  const { idToken, email } = params;
+  const { email, idToken } = params;
 
   try {
     const userRecord = await auth.getUserByEmail(email);
-
-    if (!userRecord) {
+    if (!userRecord)
       return {
         success: false,
-        message: "User doesn't exist. Please create an account",
+        message: "User does not exist. Create an account.",
       };
-    }
 
     await setSessionCookie(idToken);
-  } catch (e) {
-    console.log(e);
+  } catch (error: any) {
+    console.log("");
+
     return {
       success: false,
-      message: "Failed to login",
+      message: "Failed to log into account. Please try again.",
     };
   }
 }
 
-export async function setSessionCookie(idToken: string) {
+// Sign out user by clearing the session cookie
+export async function signOut() {
   const cookieStore = await cookies();
 
-  const sessionCookie = await auth.createSessionCookie(idToken, {
-    expiresIn: one_week * 1000,
-  });
-
-  cookieStore.set("session", sessionCookie, {
-    maxAge: one_week,
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    sameSite: "lax",
-  });
+  cookieStore.delete("session");
 }
 
+// Get current user from session cookie
 export async function getCurrentUser(): Promise<User | null> {
   const cookieStore = await cookies();
 
   const sessionCookie = cookieStore.get("session")?.value;
-
   if (!sessionCookie) return null;
 
   try {
     const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
 
+    // get user info from db
     const userRecord = await db
       .collection("users")
       .doc(decodedClaims.uid)
       .get();
-
     if (!userRecord.exists) return null;
 
     return {
       ...userRecord.data(),
       id: userRecord.id,
     } as User;
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.log(error);
 
+    // Invalid or expired session
     return null;
   }
 }
 
+// Check if user is authenticated
 export async function isAuthenticated() {
   const user = await getCurrentUser();
-
   return !!user;
+}
+
+export async function getInterviewUserById(
+  userId: string,
+): Promise<Interview[] | null> {
+  const interviews = await db
+    .collection("interviews")
+    .where("userId", "==", userId)
+    .orderBy("createdAt", "desc")
+    .get();
+
+  return interviews.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Interview[];
 }
